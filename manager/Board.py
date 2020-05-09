@@ -2,10 +2,11 @@ from serial.tools import list_ports
 
 class Board:
 
-    def __init__(self, port=None, type=None, board=None, core=None, serial=None):
+    def __init__(self, port=None, type=None, board=None, fqbn=None, core=None, serial=None):
         self.port = port
         self.type = type
         self.board = board
+        self.fqbn = fqbn
         self.core = core
         self.serial = serial
 

@@ -52,9 +52,50 @@ def _out_to_dicts(text, header_names):
     return values
 
 
+# ----------------- Commands -----------------
+
 def board_list():
     out = os.popen(f"{command} board list").read().strip()
     names = ["Port", "Type", "Board Name", "FQBN", "Core"]
     lines = _out_to_dicts(out, names)
     lines = filter(lambda x: True if x["Board Name"] != "Unknown" else False, lines)
     return lines
+
+def core_list():
+    out = os.popen(f"{command} core list").read().strip()
+    names = ["ID", "Installed", "Latest", "Name"]
+    return _out_to_dicts(out, names)
+
+def core_install(board):
+    print(f"Installing core library {board}")
+    out = os.popen(f"{command} core install {board} --format text").read().strip()
+    
+    if out.startswith("Error"):
+        print(out, file=sys.stderr)
+        return False
+
+    return True
+
+def compile(fqbn, sketch_dir):
+    sketch_name = sketch_dir[:-1].split('/')[-1]
+    print(f"Compiling {sketch_name} for {fqbn} architecture")
+    out = os.popen(f"{command} compile --fqbn {fqbn} {sketch_dir}").read().strip()
+    lines = out.split("\n")
+    
+    if lines[-1].startswith("Error"):
+        print(out, file=sys.stderr)
+        return False
+
+    return True
+
+def upload(port, fqbn, sketch_dir):
+    sketch_name = sketch_dir[:-1].split('/')[-1]
+    print(f"Upoloading {sketch_name} on {port} for {fqbn} architecture")
+    out = os.popen(f"{command} upload -p {port} --fqbn {fqbn} {sketch_dir}").read().strip()
+    lines = out.split("\n")
+    
+    if lines[-1].startswith("Error"):
+        print(out, file=sys.stderr)
+        return False
+
+    return True

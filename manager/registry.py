@@ -45,7 +45,7 @@ class Registry:
         for root, dirs, files in os.walk(self.sketches_path):
             for file in files:
                 if(file.endswith(".ino")):
-                    self.sketches[str(file)] = os.path.join(root,file)
+                    self.sketches[str(file)] = str(root)
 
     def manager_listener(self, event, board):
         if event == "add":

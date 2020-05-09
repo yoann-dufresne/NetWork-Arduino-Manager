@@ -129,6 +129,10 @@ dmypy.json
 .pyre/
 
 
+# Compiled arduino sketches
+**/*.hex
+**/*.elf
 
+# Files linked to the project execution
 registry.tsv
 bin/
