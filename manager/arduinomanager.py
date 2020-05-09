@@ -34,17 +34,19 @@ class ArduinoManager:
 
             if not board in self.boards:
                 self.boards.add(board)
-                self.notify_add(board)
+                self.notify("add", board)
 
     def upload_sketch(self, board, sketch_dir):
         if wrap.compile(board.fqbn, sketch_dir) and wrap.upload(board.port, board.fqbn, sketch_dir):
+            self.notify("upload", [board, sketch_dir])
             return True
         return False
+
 
     def add_listener(self, listener):
         self.listeners.add(listener)
 
-    def notify_add(self, board):
+    def notify(self, event, args):
         for listener in self.listeners:
-            listener("add", board)
+            listener(event, args)
 

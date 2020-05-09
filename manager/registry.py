@@ -18,7 +18,9 @@ class Registry:
 
         self.known_boards = {}  # Board: sketch name
         self.sketches = {}
+        self.revert_sketches = {}
         self.load_sketch_list()
+        self.load()
 
     def add_board(self, board):
         if board not in self.known_boards:
@@ -46,10 +48,15 @@ class Registry:
             for file in files:
                 if(file.endswith(".ino")):
                     self.sketches[str(file)] = str(root)
+                    self.revert_sketches[str(root)] = str(file)
 
-    def manager_listener(self, event, board):
+    def manager_listener(self, event, args):
         if event == "add":
-            self.add_board(board)
+            self.add_board(args)
+        elif event == "upload":
+            board, sketch = args
+            sketch = self.revert_sketches[sketch]
+            self.link_sketch(board, sketch)
 
     def save(self):
         with open(self.registry_file, "w") as registry:
@@ -60,7 +67,7 @@ class Registry:
         if os.path.isfile(self.registry_file):
             with open(self.registry_file) as registry:
                 for line in registry:
-                    board_details, sketch_name = line.split("\t")
+                    board_details, sketch_name = line.strip().split("\t")
                     name, serial = board_details[:-1].split(' (')
                     board = Board(board=name, serial=serial)
-                    serial.known_boards[board] = sketch_name
+                    self.known_boards[board] = sketch_name
