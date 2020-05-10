@@ -1,22 +1,39 @@
-import manager.arduinocliwrapper as wrap
+import argparse
+import signal
+
 from manager.registry import Registry
 from manager.arduinomanager import ArduinoManager
-import time
+from connectors.WebServer import WebServer
 
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Deploy an arduino manager and registry over the network.')
+    parser.add_argument('--sketch_directory', '-s', default='sketches', help='Define the directory to look at for arduino programs.')
+    parser.add_argument('--registry', '-r', default='registry.tsv', help='The file where the arduino registry is saved.')
+    parser.add_argument('--web_port', '-w', type=int, default=8080, help="Output file prefix.")
+
+    args = parser.parse_args()
+    return args
 
 
 def main():
-    reg = Registry()
+    args = parse_arguments()
+
+    # Load the registry
+    reg = Registry(sketches_path=args.sketch_directory, registry_file=args.registry)
     manager = ArduinoManager()
     manager.add_listener(reg.manager_listener)
-    manager.discover_boards()
+    serv = WebServer(reg, port=args.web_port)
+    serv.start()
 
-    board = list(manager.boards)[0]
-    sketch = reg.sketches["Blink-1s.ino"]
-    manager.upload_sketch(board, sketch)
-    time.sleep(5)
-    sketch = reg.sketches["Blink-01s.ino"]
-    manager.upload_sketch(board, sketch)
+    def signal_handler(sig, frame):
+        print()
+        serv.stop()
+        manager.stop()
+    signal.signal(signal.SIGINT, signal_handler)
+
+    serv.join()
+    manager.join()
 
 
 if __name__ == "__main__":

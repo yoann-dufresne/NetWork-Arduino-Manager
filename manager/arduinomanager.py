@@ -1,14 +1,30 @@
+import time
+from threading import Thread
+
 import manager.arduinocliwrapper as wrap
 from manager.Board import Board
 
 
-class ArduinoManager:
+class ArduinoManager(Thread):
 
     def __init__(self):
+        Thread.__init__(self)
+
         self.boards = set()
         self.listeners = set()
         self.cores = {}
         self.update_installed_cores()
+
+        self.stopped=False
+        self.start()
+
+    def run(self):
+        while not self.stopped:
+            self.discover_boards()
+            time.sleep(1)
+
+    def stop(self):
+        self.stopped = True
 
     def update_installed_cores(self):
         core_names = [core["ID"] for core in wrap.core_list()]
