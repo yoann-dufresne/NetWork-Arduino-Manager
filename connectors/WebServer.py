@@ -9,10 +9,25 @@ class WebServer(threading.Thread):
         threading.Thread.__init__(self)
         self.port = port
         self.stopped = False
+        self.registry = registry
 
     def run(self):
+        # Create the HTTP server
         path = '/'.join(__file__.split('/')[:-2])
         self.server = MyHTTPServer(self.port, f"{path}/www")
+        registry = self.registry
+
+        # Declare the services
+        def list_sketches():
+            content = ",".join(registry.sketches.keys())
+            return "text/plain", content.encode("utf-8")
+        self.server.declare_service("/sketches", list_sketches)
+        def list_arduinos():
+            content = "\n".join([f"{board.tsv_string()}\t{sketch}" for board, sketch in registry.known_boards.items()])
+            return "text/plain", content.encode("utf-8")
+        self.server.declare_service("/arduinos", list_arduinos)
+
+        # Serve forever
         print("webserver initiated at port", self.port)
         self.server.serve_forever()
 
@@ -28,6 +43,10 @@ class MyHTTPServer(HTTPServer):
         HTTPServer.__init__(self, ('', port), HandleRequest)
         self.port = port
         self.served_path = os.path.abspath(served_directory)
+        self.services = {}
+
+    def declare_service(self, name, handler):
+        self.services[name] = handler
 
     def is_valid_file(self, file):
         path = str(os.path.abspath(os.path.join(self.served_path, file)))
@@ -57,7 +76,7 @@ class MyHTTPServer(HTTPServer):
         content = None
         with open(path, 'r+b') as f:
             content = f.read()
-            
+
         return content_type, content
 
 
@@ -71,6 +90,12 @@ class HandleRequest(BaseHTTPRequestHandler):
         if self.server.is_valid_file(filepath):
             type, content = self.server.get_file_content(filepath)
             self.send_response(200)
+            self.send_header("Content-type", type)
+            self.end_headers()
+            self.wfile.write(content)
+        elif self.path in self.server.services:
+            self.send_response(200)
+            type, content = self.server.services[self.path]()
             self.send_header("Content-type", type)
             self.end_headers()
             self.wfile.write(content)

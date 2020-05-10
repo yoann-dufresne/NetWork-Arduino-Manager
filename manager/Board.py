@@ -14,6 +14,9 @@ class Board:
         port_details = list(list_ports.grep(self.port))[0]
         self.serial = port_details.serial_number
 
+    def tsv_string(self):
+        return f"{self.port}\t{self.board}\t{self.serial}"
+
     def __repr__(self):
         return f"{self.board} ({self.serial})"
 
