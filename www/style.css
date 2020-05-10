@@ -1,0 +1,8 @@
+
+#arduinos .disconnected {
+  color: #A9A9A9;
+}
+
+#arduinos .connected {
+  color: black;
+}
