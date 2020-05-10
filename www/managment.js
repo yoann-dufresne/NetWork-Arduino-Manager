@@ -11,13 +11,28 @@ let list_arduinos = function(callback) {
   .then(data => callback(data));
 };
 
-let ard_div = document.getElementById("arduinos");
+
+let ard_table = document.getElementById("arduinos");
+let update_arduino_list = function(port, board, serial, sketch) {
+  if (port == "None")
+    port = "";
+
+  let line = document.getElementById(serial);
+  if (line == null) {
+    ard_table.innerHTML += "<tr class='arduino' id='" + serial + "'>" + "<td class='port'>" + port + "</td>" + "<td class='board'>" + board + "</td>" + "<td class='serial'>" + serial + "</td>" + "<td class='sketch'>" + sketch + "</td>" + "</tr>";
+    line = document.getElementById(serial);
+  }
+  let prev_port = line.querySelector('.port');
+  if (port != prev_port.innerHTML)
+    prev_port.innerHTML = port
+  let prev_sketch = line.querySelector('.sketch');
+  if (sketch != prev_sketch.innerHTML)
+    prev_sketch.innerHTML = sketch
+}
+
 let interval = setInterval(()=>{list_arduinos(function(text) {
-  content = "<table><tr><td>Port</td><td>Board type</td><td>Serial number</td><td>Linked sketch</td></tr>";
   for (let line of text.split("\n")) {
     let sp = line.split("\t");
-    content += "<tr class='arduino'>" + "<td class='port'>" + sp[0] + "</td>" + "<td class='board'>" + sp[1] + "</td>" + "<td class='serial'>" + sp[2] + "</td>" + "<td class='sketch'>" + sp[3] + "</td>" + "</tr>";
+    update_arduino_list(sp[0], sp[1], sp[2], sp[3]);
   }
-  content += "</table>";
-  ard_div.innerHTML = content;
 });}, 3000);

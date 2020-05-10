@@ -57,6 +57,12 @@ class Registry:
             board, sketch = args
             sketch = self.revert_sketches[sketch]
             self.link_sketch(board, sketch)
+        elif event == "disconnected":
+            board = args
+            prog = self.known_boards[board]
+            del self.known_boards[board]
+            board.port = None
+            self.known_boards[board] = prog
 
     def save(self):
         with open(self.registry_file, "w") as registry:

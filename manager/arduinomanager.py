@@ -32,6 +32,7 @@ class ArduinoManager(Thread):
 
     def discover_boards(self):
         boards_generals_list = wrap.board_list()
+        prev_boards = set(self.boards)
 
         for boards_generals in boards_generals_list:
             board = Board(
@@ -42,6 +43,8 @@ class ArduinoManager(Thread):
                 core=boards_generals["Core"]
             )
             board.get_serial()
+            if board in prev_boards:
+                prev_boards.remove(board)
 
             # Install the core if not already present
             if board.core not in self.cores:
@@ -51,6 +54,11 @@ class ArduinoManager(Thread):
             if not board in self.boards:
                 self.boards.add(board)
                 self.notify("add", board)
+        
+        # Update status for board disconnected
+        for board in prev_boards:
+            self.boards.remove(board)
+            self.notify("disconnected", board)
 
     def upload_sketch(self, board, sketch_dir):
         if wrap.compile(board.fqbn, sketch_dir) and wrap.upload(board.port, board.fqbn, sketch_dir):
