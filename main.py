@@ -23,7 +23,7 @@ def main():
     reg = Registry(sketches_path=args.sketch_directory, registry_file=args.registry)
     manager = ArduinoManager()
     manager.add_listener(reg.manager_listener)
-    serv = WebServer(reg, port=args.web_port)
+    serv = WebServer(reg, manager, port=args.web_port)
     serv.start()
 
     def signal_handler(sig, frame):

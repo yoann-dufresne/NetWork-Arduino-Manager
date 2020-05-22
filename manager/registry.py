@@ -16,6 +16,7 @@ class Registry:
         self.sketches_path = sketches_path
         self.registry_file = registry_file
 
+        self.board_per_serial = {}
         self.known_boards = {}  # Board: sketch name
         self.sketches = {}
         self.revert_sketches = {}
@@ -29,6 +30,8 @@ class Registry:
             sketch_name = self.known_boards[board]
             del self.known_boards[board]
             self.known_boards[board] = sketch_name
+
+        self.board_per_serial[board.serial] = board
 
         self.save()
 

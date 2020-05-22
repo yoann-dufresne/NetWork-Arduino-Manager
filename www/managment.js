@@ -29,7 +29,7 @@ let create_select_sketch = function(old_prog) {
   for (let s of sketches) {
     sel += "<option value='" + s + "'";;
     if (s == old_prog){
-      sel += " selected"
+      sel += "class='sketch_ready' selected"
     }
     sel += ">" + s + "</option>";
   }
@@ -46,8 +46,16 @@ let update_arduino_list = function(port, board, serial, sketch) {
   let line = document.getElementById(serial);
   // Create a new entry if the board was unknown
   if (line == null) {
-    ard_table.innerHTML += "<tr class='arduino " + (port == "" ? "disconnected" : "connected") + "' id='" + serial + "'>" + "<td class='port'>" + port + "</td>" + "<td class='board'>" + board + "</td>" + "<td class='serial'>" + serial + "</td>" + "<td class='sketch' hidden_value='" + sketch + "'>" + (port == "" ? sketch : create_select_sketch(sketch)) + "</td>" + "</tr>";
+    ard_table.innerHTML += "<tr class='arduino " + (port == "" ? "disconnected" : "connected") + "' id='" + serial + "'>" + "<td class='port'>" + port + "</td>" + "<td class='board'>" + board + "</td>" + "<td class='serial'>" + serial + "</td>" + "<td class='sketch' hidden_value='" + sketch + "'><span class='name'>" + sketch + "</span><span class='select'>" + create_select_sketch(sketch) + "</span></td><td class='upload'><img src='/upload.png'/></td>" + "</tr>";
     line = document.getElementById(serial);
+    let sel = line.querySelector("select");
+    sel.onchange = function(data) {
+      let img = line.querySelector("img");
+      img.onclick = () => {
+        console.log("/upload/" + serial + "/" + sel.value);
+        fetch("/upload/" + serial + "/" + sel.value);
+      };
+    }
   }
   // Update the board status regarding the port
   let prev_port = line.querySelector('.port');
@@ -66,11 +74,18 @@ let update_arduino_list = function(port, board, serial, sketch) {
   }
   // Update the uploaded sketch status
   let td_sketch = line.querySelector('.sketch');
-  let prev_sketch = td_sketch.hidden_value;
+  let prev_sketch = td_sketch.querySelector('.name').innerHTML;
 
-  if (sketch != prev_sketch || port_changed) {
-    td_sketch.innerHTML = (port == "" ? sketch : create_select_sketch(sketch));
-    td_sketch.hidden_value = sketch;
+  if (sketch != prev_sketch) {
+    td_sketch.innerHTML = "<span class='name'>" + sketch + "</span><span class='select'>" + create_select_sketch(sketch) + "</span>";
+    let sel = td_sketch.querySelector("select");
+    sel.onchange = function(data) {
+      let img = line.querySelector("img");
+      img.onclick = () => {
+        console.log("/upload/" + serial + "/" + sel.value);
+        fetch("/upload/" + serial + "/" + sel.value);
+      };
+    }
   }
 }
 

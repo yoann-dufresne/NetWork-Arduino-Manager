@@ -5,11 +5,12 @@ import os
 
 class WebServer(threading.Thread):
 
-    def __init__(self, registry, port=80):
+    def __init__(self, registry, manager, port=80):
         threading.Thread.__init__(self)
         self.port = port
         self.stopped = False
         self.registry = registry
+        self.manager = manager
 
     def run(self):
         # Create the HTTP server
@@ -18,14 +19,15 @@ class WebServer(threading.Thread):
         registry = self.registry
 
         # Declare the services
-        def list_sketches():
+        def list_sketches(path):
             content = ",".join(registry.sketches.keys())
             return "text/plain", content.encode("utf-8")
         self.server.declare_service("/sketches", list_sketches)
-        def list_arduinos():
+        def list_arduinos(path):
             content = "\n".join([f"{board.tsv_string()}\t{sketch}" for board, sketch in registry.known_boards.items()])
             return "text/plain", content.encode("utf-8")
         self.server.declare_service("/arduinos", list_arduinos)
+        self.server.declare_service("/upload", self.upload_sketch)
 
         # Serve forever
         print("webserver initiated at port", self.port)
@@ -35,6 +37,25 @@ class WebServer(threading.Thread):
         self.server.shutdown()
         self.stopped = True
         print("HTTP server stopped")
+
+    # Define some services
+    def upload_sketch(self, path):
+        # Parse args
+        sp = path.split("/")
+        serial = sp[-2]
+        sketch = sp[-1]
+
+        # Sanity chcks
+        if serial not in self.registry.board_per_serial:
+            return "text/plain", b"ko: Wrong serial number"
+        board = self.registry.board_per_serial[serial]
+        if sketch not in self.registry.sketches:
+            return "text/plain", b"ko: Wrong sketch name"
+        sketch = self.registry.sketches[sketch]
+        
+        # upload
+        self.manager.upload_sketch(board, sketch)
+        return "text/plain", b"ok"
 
 
 class MyHTTPServer(HTTPServer):
@@ -86,6 +107,8 @@ class HandleRequest(BaseHTTPRequestHandler):
         if self.path == "/":
             self.path = "/index.html"
 
+        self.path_root = '/'.join(self.path.split('/')[:2])
+
         filepath = self.path[1:]
         if self.server.is_valid_file(filepath):
             type, content = self.server.get_file_content(filepath)
@@ -93,9 +116,9 @@ class HandleRequest(BaseHTTPRequestHandler):
             self.send_header("Content-type", type)
             self.end_headers()
             self.wfile.write(content)
-        elif self.path in self.server.services:
+        elif self.path_root in self.server.services:
             self.send_response(200)
-            type, content = self.server.services[self.path]()
+            type, content = self.server.services[self.path_root](self.path)
             self.send_header("Content-type", type)
             self.end_headers()
             self.wfile.write(content)

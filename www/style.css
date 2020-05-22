@@ -6,3 +6,31 @@
 #arduinos .connected {
   color: black;
 }
+
+.sketch_ready {
+  color: green;
+}
+
+.disconnected .upload {
+  display: none;
+}
+
+.connected .upload {
+  display: inline;
+}
+
+.connected .name {
+  display: none;
+}
+
+.connected .select {
+  display: inline;
+}
+
+.disconnected .name {
+  display: inline;
+}
+
+.disconnected .select {
+  display: none;
+}
