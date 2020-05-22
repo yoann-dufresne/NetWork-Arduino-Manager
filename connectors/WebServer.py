@@ -34,8 +34,8 @@ class WebServer(threading.Thread):
         self.server.serve_forever()
 
     def stop(self):
-        self.server.shutdown()
         self.stopped = True
+        self.server.shutdown()
         print("HTTP server stopped")
 
     # Define some services
