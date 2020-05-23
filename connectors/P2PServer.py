@@ -1,54 +1,61 @@
 from threading import Thread
-import socketserver
 import sys
+import random
+import string
 
-
-class MyTCPHandler(socketserver.BaseRequestHandler):
-
-    p2p = None
-
-    def handle(self):
-        # self.request is the TCP socket connected to the client
-        self.text = self.request.recv(1024).strip().encode('utf-8')
-        ip = self.client_address[0]
-        # just send back the same data, but upper-cased
-        self.request.sendall(b"pouet")
+import zmq
+import time
 
 
 class P2PServer(Thread):
 
-    def __init__(self, registery, manager, port=8484):
+    def __init__(self, registery, manager, p2p_start_ip="192.168.1.40", port=8484):
         Thread.__init__(self)
+
+        self.uniq_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=32))
 
         self.registery = registery
         self.manager = manager
 
+        self.context = zmq.Context()
+        self.bcast = self.context.socket(zmq.PUB)
+        try:
+            self.bcast.bind(f"tcp://*:{port}")
+            self.stopped = False
+        except zmq.error.ZMQError:
+            print(f"Port {port} already in use. P2P server stopped")
+            self.stopped = True
+        
+        self.p2p_start_ip = p2p_start_ip.split('.')
         self.port = port
-        self.server = None
-        self.sockets = {}
-        self.stopped = False
+
 
     def run(self):
-        MyTCPHandler.p2p = self
+        if self.stopped:
+            return
+            
+        listener = self.context.socket(zmq.SUB)
 
-        for port_index in range(self.port, self.port + 100):
+        base_ip = '.'.join(self.p2p_start_ip[:-1])
+        last_ip_num = int(self.p2p_start_ip[-1])
+        for offset in range(10):
+            listener.connect(f"tcp://{base_ip}.{str(last_ip_num + offset)}:{self.port}")
+
+        listener.setsockopt(zmq.SUBSCRIBE, b'')
+        print(f"Peer to peer server launched on port {self.port}")
+        while not self.stopped:
             try:
-                # Create the server, binding to localhost on port 9999
-                with socketserver.TCPServer(("localhost", port_index), MyTCPHandler) as server:
-                    self.port = port_index
-                    print(f"Server socket started on port {self.port}")
-                    self.server = server
-                    # Activate the server; this will keep running until you
-                    # interrupt the program with Ctrl-C
-                    self.server.serve_forever()
-            except OSError:
-                continue
-            if self.stopped:
+                print(listener.recv_string())
+            except (KeyboardInterrupt, zmq.ContextTerminated):
                 break
 
-        if not self.stopped:
-            print("Impossible to create a server socket", file=sys.stderr)
+        print("Peer to peer closed")
 
     def stop(self):
         self.stopped = True
-        self.server.shutdown()
+        self.bcast.close()
+        self.context.destroy()
+
+    def send_message(self, msg):
+        if not self.stopped:
+            self.bcast.send_string(msg)

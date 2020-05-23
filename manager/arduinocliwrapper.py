@@ -54,6 +54,11 @@ def _out_to_dicts(text, header_names):
 
 # ----------------- Commands -----------------
 
+def update_index():
+    out = os.popen(f"{command} core update-index").read().strip()
+    print(out)
+update_index()
+
 def board_list():
     out = os.popen(f"{command} board list").read().strip()
     names = ["Port", "Type", "Board Name", "FQBN", "Core"]

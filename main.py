@@ -13,6 +13,7 @@ def parse_arguments():
     parser.add_argument('--registry', '-r', default='registry.tsv', help='The file where the arduino registry is saved.')
     parser.add_argument('--web_port', '-w', type=int, default=8080, help="Output file prefix.")
     parser.add_argument('--no_webserver', '-nw', action="store_true")
+    parser.add_argument('--no_p2p', '-np', action="store_true")
 
     args = parser.parse_args()
     return args
@@ -28,21 +29,31 @@ def main():
     if not args.no_webserver:
         webserv = WebServer(reg, manager, port=args.web_port)
         webserv.start()
-    p2pserv = P2PServer(reg, manager)
-    p2pserv.start()
+    if not args.no_p2p:
+        p2pserv = P2PServer(reg, manager)
+        p2pserv.start()
 
 
     def signal_handler(sig, frame):
         print()
         if not args.no_webserver:
             webserv.stop()
-        p2pserv.stop()
+        if not args.no_p2p:
+            p2pserv.stop()
         manager.stop()
     signal.signal(signal.SIGINT, signal_handler)
 
+    if not args.no_p2p and not p2pserv.stopped:
+        import time
+        time.sleep(3)
+        p2pserv.send_message("Pouet !!")
+
     if not args.no_webserver:
         webserv.join()
-    p2pserv.join()
+    if not args.no_p2p:
+        p2pserv.join()
+
+    manager.stop()
     manager.join()
 
 
