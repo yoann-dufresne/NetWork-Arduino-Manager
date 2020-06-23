@@ -92,6 +92,7 @@ let update_arduino_list = function(port, board, serial, sketch) {
 let interval = setInterval(()=>{list_arduinos(function(text) {
   for (let line of text.split("\n")) {
     let sp = line.split("\t");
-    update_arduino_list(sp[0], sp[1], sp[2], sp[3]);
+    if (sp.length >= 4)
+        update_arduino_list(sp[0], sp[1], sp[2], sp[3]);
   }
 });}, 3000);

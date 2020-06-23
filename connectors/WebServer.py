@@ -5,28 +5,20 @@ import os
 
 class WebServer(threading.Thread):
 
-    def __init__(self, registry, manager, port=80):
+    def __init__(self, router, port=80):
         threading.Thread.__init__(self)
         self.port = port
         self.stopped = False
-        self.registry = registry
-        self.manager = manager
+        self.router = router
 
     def run(self):
         # Create the HTTP server
         path = '/'.join(__file__.split('/')[:-2])
         self.server = MyHTTPServer(self.port, f"{path}/www")
-        registry = self.registry
 
         # Declare the services
-        def list_sketches(path):
-            content = ",".join(registry.sketches.keys())
-            return "text/plain", content.encode("utf-8")
-        self.server.declare_service("/sketches", list_sketches)
-        def list_arduinos(path):
-            content = "\n".join([f"{board.tsv_string()}\t{sketch}" for board, sketch in registry.known_boards.items()])
-            return "text/plain", content.encode("utf-8")
-        self.server.declare_service("/arduinos", list_arduinos)
+        self.server.declare_service("/sketches", self.list_sketches)
+        self.server.declare_service("/arduinos", self.list_arduinos)
         self.server.declare_service("/upload", self.upload_sketch)
 
         # Serve forever
@@ -38,23 +30,27 @@ class WebServer(threading.Thread):
         self.server.shutdown()
         print("HTTP server stopped")
 
+    def list_sketches(self, path):
+        content = ",".join([s.name for s in self.router.list_sketches()])
+        return "text/plain", content.encode("utf-8")
+
+    def list_arduinos(self, path):
+        boards_sketch_pair = self.router.list_board_sketch_pairs()
+        content = "\n".join([f"{board.tsv_string()}\t{sketch}" for board, sketch in boards_sketch_pair])
+        return "text/plain", content.encode("utf-8")
+
     # Define some services
     def upload_sketch(self, path):
         # Parse args
         sp = path.split("/")
         serial = sp[-2]
-        sketch = sp[-1]
+        sketch_name = sp[-1]
 
-        # Sanity chcks
-        if serial not in self.registry.board_per_serial:
-            return "text/plain", b"ko: Wrong serial number"
-        board = self.registry.board_per_serial[serial]
-        if sketch not in self.registry.sketches:
-            return "text/plain", b"ko: Wrong sketch name"
-        sketch = self.registry.sketches[sketch]
+        try:
+            self.router.upload(serial, sketch_name)
+        except KeyError as e:
+            return "text/plain", str(e).encode("utf-8")
         
-        # upload
-        self.manager.upload_sketch(board, sketch)
         return "text/plain", b"ok"
 
 
